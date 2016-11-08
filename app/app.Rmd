@@ -59,10 +59,7 @@ output$downloadAllData <- downloadHandler(
     },
     content = function(file) {
       bind_rows(downloaded_queries) %>% 
-        tidyr::gather(Variable, Value, -(Study:CImplant)) %>% 
-        tidyr::unite(Study_Variable, c(Study, Variable)) %>% 
-        tidyr::spread(Study_Variable, Value) %>% 
-        readr::write_csv(file)
+        readr::write_excel_csv(file)
     }
 )
 renderUI({downloadButton("downloadAllData", label = "Download all data")})

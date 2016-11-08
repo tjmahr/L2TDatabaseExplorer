@@ -1,0 +1,63 @@
+---
+title: "L2T Database Explorer"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+  runtime: shiny
+---
+
+```{r setup, include = FALSE}
+session$onSessionEnded(stopApp)
+```
+
+
+Participant Data {data-orientation=rows}
+======================================================================
+
+Inputs {.sidebar data-width=300}
+-----------------------------------------------------------------------
+
+View summary data for studies in the database.
+ 
+```{r select-query}
+selectInput("tableChoice", "Study:", names(query_set))  
+```
+
+```{r make-data-set}
+dataset <- reactive({
+  req(input$tableChoice)
+  downloaded_queries[[input$tableChoice]]
+})
+
+# renderTable(head(dataset()))
+```
+
+
+```{r make-download-button}
+output$downloadStudyData <- downloadHandler(
+    filename = function() {
+      req(input$tableChoice)
+      date_compiled <- format(Sys.Date())
+      paste0(date_compiled, "_", input$tableChoice, ".csv")
+    },
+    content = function(file) {
+      req(dataset)
+      readr::write_csv(dataset(), file)
+    }
+)
+renderUI({downloadButton("downloadStudyData")})
+```
+
+
+Tables {data-width=300}
+----------------------------------------------
+
+### Table
+
+```{r}
+renderTable(dataset())
+```
+
+
+

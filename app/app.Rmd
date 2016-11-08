@@ -49,6 +49,22 @@ output$downloadStudyData <- downloadHandler(
 renderUI({downloadButton("downloadStudyData")})
 ```
 
+<br/>
+
+```{r download-all-button}
+output$downloadAllData <- downloadHandler(
+    filename = function() {
+      date_compiled <- format(Sys.Date())
+      paste0(date_compiled, "_", "all_studies", ".csv")
+    },
+    content = function(file) {
+      readr::write_csv(bind_rows(downloaded_queries), file)
+    }
+)
+renderUI({downloadButton("downloadAllData", label = "Download all data")})
+```
+
+
 
 Tables {data-width=300}
 ----------------------------------------------

@@ -1,0 +1,52 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "README-"
+)
+```
+
+# L2TDatabaseExplorer
+
+The goal of L2TDatabaseExplorer is to ...
+
+## Getting started - RStudio
+
+...
+
+## Getting started - Programmatically
+
+Connect to the University of Minnesota VPN.
+
+Clone this repository.
+
+```{bash, eval = FALSE}
+git clone https://github.com/LearningToTalk/L2TDatabaseExplorer.git
+cd L2TDatabaseExplorer
+```
+
+Run setup script. This will install the packages required to use the app.
+
+```{bash, eval = FALSE}
+Rscript setup.R
+```
+
+The app looks for a file called `l2t_db.cnf` in this folder. If there is no such
+file, create one using the function `L2TDatabase::make_cnf_file()` and valid
+user credentials and the network address of the database. These can be found on
+the L2T wiki page about the database.
+
+Now, you can launch the app. It should work if you have a connection to the UMN
+VPN and valid credentials saved for the database.
+
+```{bash, eval = FALSE}
+Rscript run.R
+```
+
+

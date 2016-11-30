@@ -2,7 +2,7 @@ install.packages("curl", repos = "https://cran.rstudio.com/")
 install.packages("devtools", repos = "https://cran.rstudio.com/")
 
 packages <- c("tidyverse", "yaml", "knitr", "rmarkdown",
-              "flexdashboard", "withr", "arm")
+              "flexdashboard", "withr", "arm", "git2r")
 install.packages(packages, repos = "https://cran.rstudio.com/")
 
 devtools::install_github("LearningToTalk/L2TDatabase")

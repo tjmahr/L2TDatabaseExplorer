@@ -77,4 +77,147 @@ renderTable(dataset())
 ```
 
 
+Longitudinal Plotter {data-orientation=rows}
+======================================================================
 
+<!-- This page was adapted from this example dashboard
+     https://jjallaire.shinyapps.io/shiny-ggplot2-diamonds/ -->
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+selectInput("xLongScatter", "X", names(long_comp), "T1_EVT_GSV")
+selectInput("yLongScatter", "Y", names(long_comp), "T2_EVT_GSV")
+selectInput("colorLongScatter", "Color", c("None", names(long_comp)))
+
+checkboxInput("splitColorLongScatter", "Median-Split Color", value = FALSE)
+
+
+selectInput("facetRowLongScatter", "Facet Row",
+            c(None = ".", names(long_comp[sapply(long_comp, is.factor)])))
+selectInput("facetColLongScatter", "Facet Column",
+            c(None = ".", names(long_comp[sapply(long_comp, is.factor)])))
+
+selectInput("smoothLongScatter", "Trend line", 
+            c(None = "None", Linear = "lm", LOESS = "loess"))
+```
+
+Outputs
+-----------------------------------------------------------------------
+
+### Score Plotter
+
+```{r}
+# The dataset needs to be (temporarily) modified if median splits are requested,
+# so make it reactive
+long_scatter_data <- reactive({
+  req(input$colorLongScatter)
+  p_data <- long_comp
+  
+  # We should split if the box is checked, "None" is not selected, and color
+  # variable is numeric
+  can_split <- input$splitColorLongScatter && 
+    input$colorLongScatter != "None" && 
+    is.numeric(p_data[[input$colorLongScatter]])
+  
+  col_split <- character()
+  
+  # Create a column with the medium split data
+  if (can_split) {
+    col_split <- paste0(input$colorLongScatter, "_Split")
+    p_data[[col_split]] <- p_data[[input$colorLongScatter]] %>% 
+      ntile(2) %>% 
+      factor(1:2, c("Bottom Half", "Top Half"), exclude = NULL)
+  }
+  
+  list(
+    data = p_data,
+    split = can_split,
+    split_var = col_split
+  )
+})
+
+renderPlot({
+  req(long_scatter_data)
+  plot_info <- long_scatter_data()
+  
+  p <- ggplot(plot_info$data) + 
+    aes_string(x = input$xLongScatter, y = input$yLongScatter) + 
+    geom_point()
+  
+  # Handle color
+  if (input$colorLongScatter != "None") { 
+    col_string <- if (plot_info$split) { 
+      plot_info$split_var
+    } else { 
+      input$colorLongScatter
+    }
+    p <- p + aes_string(color = col_string)
+  }
+  
+  facets <- paste(input$facetRowLongScatter, "~", input$facetColLongScatter)
+  
+  if (facets != ". ~ .") { 
+    p <- p + facet_grid(facets)
+  }
+  
+  if (input$smoothLongScatter != "None") {
+    p <- p + geom_smooth(method = input$smoothLongScatter)
+  }
+
+  print(p)
+})
+```
+
+Supporting information
+-----------------------------------------------------------------------
+
+### Multiple Regression (Numeric Variables Scaled to Mean 0, SD 1)
+
+```{r}
+fit_plotted_model <- reactive({
+  # Get list of strings of plotting aesthetics
+  variables <- list(
+    x = input$xLongScatter,
+    y = input$yLongScatter, 
+    color = input$colorLongScatter,
+    f_col = input$facetColLongScatter,
+    f_row = input$facetRowLongScatter)
+
+  # Remove non-data values
+  f_parts <- variables %>% 
+    Filter(function(x) x != "None" && x != ".", .)
+  f_cols <- f_parts
+  
+  # Scale numeric values
+  scale_string <- function(x) sprintf("scale(%s)", x)
+  
+  non_factors <- long_comp[unlist(f_parts)] %>% 
+    sapply(is.numeric) %>% 
+    which
+  
+  f_parts[non_factors] <- f_parts[non_factors] %>% lapply(scale_string)
+
+  # Combine predictors into a single interaction  
+  f_pred <- f_parts[names(f_parts) != "y"]
+  f_pred <- paste0(unlist(f_pred), collapse = " * ")
+  
+  # Combine response and predictor parts
+  f_model <- paste0(f_parts$y, " ~ ", f_pred)
+  model <- lm(f_model, long_comp)
+  
+  list(data = long_comp[unlist(f_cols)] %>% na.omit, 
+       model = model)
+})
+
+renderPrint(arm::display(fit_plotted_model()[["model"]]))
+```
+
+### Descriptives {data-width=350}
+
+```{r}
+renderTable(fit_plotted_model()[["data"]] %>% 
+              lapply(describe_col) %>% 
+              bind_rows(.id = "Variable"))
+```

@@ -10,11 +10,7 @@ library(dplyr, warn.conflicts = FALSE)
 library(L2TDatabase)
 library(ggplot2)
 
-if (interactive()) {
-  l2t <- l2t_connect("./l2t_db.cnf", "l2t")
-} else {
-  l2t <- l2t_connect("../l2t_db.cnf", "l2t")
-}
+l2t <- l2t_connect("../l2t_db.cnf", "l2t")
 
 # Create a long data-frame of descriptive stats for some values
 describe_col <- function(x) UseMethod("describe_col")

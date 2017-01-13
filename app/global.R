@@ -46,9 +46,9 @@ describe_col.numeric <- function(x) {
 
 
 query_set <- list(
-  TimePoint1 = "q_Scores_TimePoint1",
-  TimePoint2 = "q_Scores_TimePoint2",
-  TimePoint3 = "q_Scores_TimePoint3")
+  TimePoint1 = "Scores_TimePoint1",
+  TimePoint2 = "Scores_TimePoint2",
+  TimePoint3 = "Scores_TimePoint3")
 
 # Hmm. Shiny/RStudio are being really unpredictable about this database stuff.
 # Just download what we need into memory for now.
@@ -56,8 +56,7 @@ download_query <- . %>%
   tbl(l2t, .) %>%
   collect %>%
   mutate(DateCompiled = format(Sys.Date())) %>%
-  select(Study, DateCompiled, everything()) %>%
-  select(-ChildStudyID)
+  select(Study, DateCompiled, everything())
 
 downloaded_queries <- Map(download_query, query_set)
 

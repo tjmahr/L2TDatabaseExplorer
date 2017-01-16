@@ -1,15 +1,108 @@
 ---
 title: "L2T Database Explorer"
-output: 
+resource_files:
+- data/tp1.csv
+- data/tp2.csv
+- data/tp3.csv
+runtime: shiny
+output:
   flexdashboard::flex_dashboard:
     orientation: columns
+    theme: lumen
     vertical_layout: fill
-  runtime: shiny
 ---
 
 ```{r setup, include = FALSE}
+library(flexdashboard)
+library(shiny)
+library(dplyr, warn.conflicts = FALSE)
+library(ggplot2)
+
 session$onSessionEnded(stopApp)
+
+# App is in a subfolder of an RStudio project, unless it's running in
+# ShinyApps.io, so look for Rproj or fail with "./"
+find_app_dir <- function() {
+  dir_proj <- rprojroot::find_root(rprojroot::is_rstudio_project)
+  file.path(dir_proj, "app")
+}
+
+dir_app <- purrr::possibly(find_app_dir, ".", quiet = TRUE)()
+source(file.path(dir_app, "helpers.R"))
+
+# Here is where we would download stuff from the database but just work with the
+# local files for the demo...
+
+downloaded_queries <- list(
+  TimePoint1 = readr::read_csv(file.path(dir_app, "data", "tp1.csv")),
+  TimePoint2 = readr::read_csv(file.path(dir_app, "data", "tp2.csv")),
+  TimePoint3 = readr::read_csv(file.path(dir_app, "data", "tp3.csv"))
+)
+
+downloaded_queries <- downloaded_queries %>%
+  lapply(. %>% mutate(DateCompiled = format(Sys.Date())))
+
+# Make a wide data-frame of all the longitudinal scores
+remove_longitudinal_nondata_cols <- . %>%
+  select(everything(), -ends_with("Completion"), -ends_with("Form"),
+         -ends_with("Experiment"), -DateCompiled)
+
+id_cols <- c("Study", "ResearchID", "Female", "AAE", "LateTalker", "CImplant")
+
+fct_undummy_code <- function(x, labels) {
+  factor(x, levels = c("0", "1"), labels = labels, exclude = NULL)
+}
+
+reshape_longitudinal_data <- . %>%
+  tidyr::gather(Measure, Value, -one_of(id_cols)) %>%
+  mutate(Study = stringr::str_replace(Study, "TimePoint", "T")) %>%
+  tidyr::unite(Measure, Study, Measure)
+
+long_comp <- downloaded_queries %>%
+  lapply(remove_longitudinal_nondata_cols) %>%
+  lapply(reshape_longitudinal_data) %>%
+  bind_rows() %>%
+  tidyr::spread(Measure, Value)
+
+long_comp <- long_comp %>%
+  readr::type_convert() %>%
+  mutate(Female = fct_undummy_code(Female, c("Male", "Female")),
+         AAE = fct_undummy_code(AAE, c("SAE", "AAE")),
+         LateTalker = fct_undummy_code(LateTalker, c("TD", "Late Talker")),
+         CImplant = fct_undummy_code(CImplant, c("TD", "C. Implant")))
 ```
+
+
+
+About {data-orientation=rows}
+===============================================================================
+
+Row {data-height=400}
+-----------------------------------------------------------------------
+
+### About the app
+
+[This app](https://github.com/tjmahr/l2t-database-explorer-demo) is a Shiny 
+dashboard designed to provide interactive plotting of data from a three-year
+longitudinal study of language development. I'll probably add more widgets over
+time, but for now the main functionality is a page for interactive plotting,
+model-fitting and descriptive statistics.
+
+The real version of the app collects the data from a remote MySQL database, but
+for the demo we are working with locally stored data. The data here are the
+first 50 rows of each database query and uses only a third of the overall
+columns. All numerical variables have been jittered, twice. This is just a demo
+after all.
+
+[Tristan Mahr](https://tjmahr.github.io/)
+
+
+### About the measures 
+
+The EVT is an expressive vocabulary test, PPVT a receptive vocabulary test, GFTA
+an articulation test, Verbal Fluency how many words a child named in a
+fluency retrival task, and LENA AWC the average number of words per hour
+spoken to the child during a day-long LENA recording.
 
 
 Participant Data {data-orientation=rows}
@@ -21,7 +114,7 @@ Inputs {.sidebar data-width=300}
 View summary data for studies in the database.
  
 ```{r select-query}
-selectInput("tableChoice", "Study:", names(query_set))  
+selectInput("tableChoice", "Study:", names(downloaded_queries))  
 ```
 
 ```{r make-data-set}
@@ -195,7 +288,7 @@ fit_plotted_model <- reactive({
   
   non_factors <- long_comp[unlist(f_parts)] %>% 
     sapply(is.numeric) %>% 
-    which
+    which()
   
   f_parts[non_factors] <- f_parts[non_factors] %>% lapply(scale_string)
 
